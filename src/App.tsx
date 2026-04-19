@@ -82,6 +82,8 @@ export default function App() {
     mode: 'black-white',
     debugMode: false,
     autoThreshold: true,
+    noiseIntensity: 0,
+    invertMask: false,
   });
 
   const [layout, setLayout] = useState<CharacterInfo[]>([]);
@@ -198,18 +200,20 @@ export default function App() {
 
       const idx = (iy * VIRTUAL_WIDTH + ix) * 4;
       const l = getLuminance(state.maskData[idx], state.maskData[idx + 1], state.maskData[idx + 2]);
-      const isActive = l >= state.threshold;
+      const isActive = state.invertMask ? l < state.threshold : l >= state.threshold;
 
       if (isActive) {
         ctx.fillStyle = textColor;
-        ctx.globalAlpha = 1.0;
+        // Jitter logic: apply random opacity variation to create "grain"
+        const jitter = state.noiseIntensity > 0 ? (Math.random() * state.noiseIntensity) : 0;
+        ctx.globalAlpha = Math.max(0, 1.0 - jitter);
       } else {
         ctx.fillStyle = state.mode === 'grayscale' ? `rgb(${l},${l},${l})` : textColor;
         ctx.globalAlpha = state.backgroundOpacity;
       }
       ctx.fillText(char.char, char.x, char.y);
     }
-  }, [layout, state.maskData, state.threshold, state.mode, state.backgroundOpacity, state.debugMode]);
+  }, [layout, state.maskData, state.threshold, state.mode, state.backgroundOpacity, state.debugMode, state.noiseIntensity]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!state.image) return;
@@ -253,7 +257,12 @@ export default function App() {
       if (state.maskData && ix >= 0 && iy >= 0 && ix < VIRTUAL_WIDTH && iy < VIRTUAL_HEIGHT) {
         const idx = (iy * VIRTUAL_WIDTH + ix) * 4;
         const l = getLuminance(state.maskData[idx], state.maskData[idx + 1], state.maskData[idx + 2]);
-        if (l < state.threshold) {
+        
+        const isMasked = state.invertMask ? l < state.threshold : l >= state.threshold;
+        if (isMasked) {
+          fill = textColor;
+          opacity = state.noiseIntensity > 0 ? Math.max(0, 1.0 - Math.random() * state.noiseIntensity) : 1.0;
+        } else {
           opacity = state.backgroundOpacity;
           if (state.mode === 'grayscale') { fill = `rgb(${l},${l},${l})`; opacity = 1.0; }
         }
@@ -395,11 +404,24 @@ export default function App() {
                   className="w-full h-1 bg-brand-border rounded-lg appearance-none cursor-pointer accent-white focus:outline-none"
                 />
               </ControlGroup>
+
+              <ControlGroup label="Camo Noise" value={Math.round(state.noiseIntensity * 100)} unit="%">
+                <input 
+                  type="range" min="0" max="1" step="0.01" 
+                  value={state.noiseIntensity}
+                  onChange={e => setState(p => ({ ...p, noiseIntensity: parseFloat(e.target.value) }))}
+                  className="w-full h-1 bg-brand-border rounded-lg appearance-none cursor-pointer accent-white focus:outline-none"
+                />
+              </ControlGroup>
               
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-mono uppercase tracking-widest text-brand-deep-muted">Auto Optimizer</label>
                   <Switch checked={state.autoThreshold} onChange={val => setState(p => ({ ...p, autoThreshold: val }))} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-brand-deep-muted">Invert Mask</label>
+                  <Switch checked={state.invertMask} onChange={val => setState(p => ({ ...p, invertMask: val }))} />
                 </div>
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-mono uppercase tracking-widest text-brand-deep-muted">Debug Mask</label>

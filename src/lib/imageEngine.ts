@@ -36,6 +36,10 @@ export function prepareMaskBuffer(
   
   if (!ctx) return { data: new Uint8ClampedArray(0), w: 0, h: 0 };
 
+  // Fill with white to ensure transparency in PNGs is treated as background (white)
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
   ctx.save();
   // Move to center to apply rotation and scale consistently
   ctx.translate(width / 2 + transform.x, height / 2 + transform.y);

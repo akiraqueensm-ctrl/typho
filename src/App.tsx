@@ -167,7 +167,8 @@ export default function App() {
       const debugImageData = ctx.createImageData(VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
       for (let i = 0; i < state.maskData.length; i += 4) {
         const l = getLuminance(state.maskData[i], state.maskData[i+1], state.maskData[i+2]);
-        const val = l >= state.threshold ? 255 : 0;
+        const isActive = state.invertMask ? l < state.threshold : l >= state.threshold;
+        const val = isActive ? 255 : 0;
         debugImageData.data[i] = val;
         debugImageData.data[i+1] = val;
         debugImageData.data[i+2] = val;
@@ -213,7 +214,7 @@ export default function App() {
       }
       ctx.fillText(char.char, char.x, char.y);
     }
-  }, [layout, state.maskData, state.threshold, state.mode, state.backgroundOpacity, state.debugMode, state.noiseIntensity]);
+  }, [layout, state.maskData, state.threshold, state.mode, state.backgroundOpacity, state.debugMode, state.noiseIntensity, state.invertMask]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!state.image) return;

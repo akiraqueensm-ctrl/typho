@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "EB Garamond", Garamond, Baskerville, "Minion Pro", serif;
+  --color-brand-bg: #0f0f0f;
+  --color-brand-surface: #151515;
+  --color-brand-header: #1a1a1a;
+  --color-brand-canvas: #050505;
+  --color-brand-border: #333333;
+  --color-brand-accent: #007aff;
+  --color-brand-text: #e5e5e5;
+  --color-brand-muted: #888888;
+  --color-brand-deep-muted: #666666;
+  
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@utility bg-dot-grid {
+  background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-bg text-brand-text antialiased;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-brand-border rounded-full;
+}

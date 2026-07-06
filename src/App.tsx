@@ -84,6 +84,7 @@ export default function App() {
     autoThreshold: true,
     noiseIntensity: 0,
     invertMask: false,
+    fontSize: 48,
   });
 
   const [layout, setLayout] = useState<CharacterInfo[]>([]);
@@ -128,18 +129,21 @@ export default function App() {
       marginBottom: 200,
       marginLeft: 250,
       marginRight: 200,
-      fontSize: 48,
-      lineHeight: 63,
+      fontSize: state.fontSize,
+      lineHeight: state.fontSize * 1.3125,
       charsPerLine: 65,
       indent: 80,
     });
     setLayout(chars);
-  }, [state.text]);
+  }, [state.text, state.fontSize]);
 
   useEffect(() => { updateLayout(); }, [updateLayout]);
 
   useEffect(() => {
-    if (!state.image) return;
+    if (!state.image) {
+      if (state.maskData) setState(prev => ({ ...prev, maskData: null }));
+      return;
+    }
     const { data, w, h } = prepareMaskBuffer(state.image, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, state.transform);
     let threshold = state.threshold;
     if (state.autoThreshold) threshold = computeAutoThreshold(data);
@@ -178,11 +182,14 @@ export default function App() {
       return;
     }
 
-    ctx.font = '48px "EB Garamond", Garamond, Baskerville, serif';
+    ctx.font = `${state.fontSize}px "EB Garamond", Garamond, Baskerville, serif`;
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
 
     for (const char of layout) {
+      const charFontSize = char.fontSize || state.fontSize;
+      ctx.font = `${charFontSize}px "EB Garamond", Garamond, Baskerville, serif`;
+      
       if (!state.maskData) {
         ctx.fillStyle = textColor;
         ctx.globalAlpha = 1.0;
@@ -190,8 +197,8 @@ export default function App() {
         continue;
       }
 
-      const ix = Math.floor(char.x + 12); 
-      const iy = Math.floor(char.y - 18);
+      const ix = Math.floor(char.x + charFontSize * 0.25); 
+      const iy = Math.floor(char.y - charFontSize * 0.375);
       if (ix < 0 || iy < 0 || ix >= VIRTUAL_WIDTH || iy >= VIRTUAL_HEIGHT) {
         ctx.fillStyle = textColor;
         ctx.globalAlpha = state.backgroundOpacity;
@@ -251,10 +258,12 @@ export default function App() {
     svgContent += `<rect width="100%" height="100%" fill="${state.mode === 'white-black' ? 'black' : state.mode === 'dramatic-red' ? '#0a0000' : 'white'}" />`;
     const textColor = (state.mode === 'white-black') ? 'white' : (state.mode === 'dramatic-red' ? 'red' : 'black');
     layout.forEach(char => {
-      const ix = Math.floor(char.x + 12);
-      const iy = Math.floor(char.y - 18);
+      const charFontSize = char.fontSize || state.fontSize;
+      const ix = Math.floor(char.x + charFontSize * 0.25);
+      const iy = Math.floor(char.y - charFontSize * 0.375);
       let opacity = 1.0;
       let fill = textColor;
+
       if (state.maskData && ix >= 0 && iy >= 0 && ix < VIRTUAL_WIDTH && iy < VIRTUAL_HEIGHT) {
         const idx = (iy * VIRTUAL_WIDTH + ix) * 4;
         const l = getLuminance(state.maskData[idx], state.maskData[idx + 1], state.maskData[idx + 2]);
@@ -268,7 +277,7 @@ export default function App() {
           if (state.mode === 'grayscale') { fill = `rgb(${l},${l},${l})`; opacity = 1.0; }
         }
       }
-      svgContent += `<text x="${char.x}" y="${char.y}" font-family="EB Garamond, Garamond, Baskerville, serif" font-size="48" fill="${fill}" opacity="${opacity}">${char.char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>`;
+      svgContent += `<text x="${char.x}" y="${char.y}" font-family="EB Garamond, Garamond, Baskerville, serif" font-size="${charFontSize}" fill="${fill}" opacity="${opacity}">${char.char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>`;
     });
     svgContent += `</svg>`;
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
@@ -297,9 +306,46 @@ export default function App() {
                 className="w-full h-40 bg-black border border-brand-border rounded-sm p-2.5 text-[11px] font-mono leading-relaxed text-brand-muted focus:outline-none focus:border-brand-accent/50 resize-none custom-scrollbar"
                 placeholder="Narrative source..."
               />
-              <div className="flex items-center justify-between text-[10px] uppercase font-mono tracking-wider">
-                <span className="text-zinc-600 truncate">Book Layout: 1755 C/PG</span>
-                <button onClick={() => setState(p => ({ ...p, text: DEFAULT_TEXT }))} className="text-brand-accent hover:underline shrink-0">Reset</button>
+              
+              <ControlGroup label="Font Size" value={state.fontSize} unit="PX">
+                <input 
+                  type="range" min="12" max="120" step="1" 
+                  value={state.fontSize}
+                  onChange={e => setState(p => ({ ...p, fontSize: parseInt(e.target.value) }))}
+                  className="w-full h-1 bg-brand-border rounded-lg appearance-none cursor-pointer accent-white focus:outline-none"
+                />
+              </ControlGroup>
+
+              <div className="flex flex-col gap-1.5 mt-1 border-t border-brand-border pt-2">
+                <div className="flex items-baseline justify-between text-[9px] uppercase font-mono tracking-wider text-brand-deep-muted">
+                  <span># Title</span>
+                  <span className="opacity-50">Lrg Center</span>
+                </div>
+                <div className="flex items-baseline justify-between text-[9px] uppercase font-mono tracking-wider text-brand-deep-muted">
+                  <span>## Sub</span>
+                  <span className="opacity-50">Mid Center</span>
+                </div>
+                <div className="flex items-baseline justify-between text-[9px] uppercase font-mono tracking-wider text-brand-deep-muted">
+                  <span>### Lab</span>
+                  <span className="opacity-50">Sml Center</span>
+                </div>
+                <div className="flex items-baseline justify-between text-[9px] uppercase font-mono tracking-wider text-brand-deep-muted">
+                  <span>[cap] Paragraph</span>
+                  <span className="opacity-50">Drop Cap</span>
+                </div>
+                <div className="flex items-baseline justify-between text-[9px] uppercase font-mono tracking-wider text-brand-deep-muted">
+                  <span>[c] Text</span>
+                  <span className="opacity-50">Centered</span>
+                </div>
+                <div className="flex items-baseline justify-between text-[9px] uppercase font-mono tracking-wider text-brand-deep-muted">
+                  <span>[r] Text</span>
+                  <span className="opacity-50">Right</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] uppercase font-mono tracking-wider mt-1">
+                <span className="text-zinc-600 truncate">Layout: {Math.round(1755 * (48/state.fontSize))} C/PG</span>
+                <button onClick={() => setState(p => ({ ...p, text: DEFAULT_TEXT, fontSize: 48 }))} className="text-brand-accent hover:underline shrink-0">Reset</button>
               </div>
             </div>
           </Section>
@@ -335,7 +381,7 @@ export default function App() {
 
               {state.image && (
                 <div className="flex gap-2">
-                  <button onClick={() => setState(p => ({ ...p, image: null }))} className="flex-1 h-8 bg-transparent border border-brand-border text-brand-text hover:bg-red-500/10 hover:border-red-500/50 rounded-sm text-[10px] font-mono uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors">
+                  <button onClick={() => setState(p => ({ ...p, image: null, maskData: null }))} className="flex-1 h-8 bg-transparent border border-brand-border text-brand-text hover:bg-red-500/10 hover:border-red-500/50 rounded-sm text-[10px] font-mono uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors">
                     <Trash2 className="w-3 h-3" /> Clear
                   </button>
                 </div>
